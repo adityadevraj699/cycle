@@ -2,8 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Start from './pages/Start/Start';
-import Search from './pages/End/search';
-import Payment from './pages/Start/payment';
+import Search from './pages/End/Search.jsx';
+import Payment from './pages/Start/Payment.jsx';
 import PaymentDetails from './pages/End/Payment';
 
 function App() {
