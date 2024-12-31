@@ -6,35 +6,54 @@ function Payment() {
   const { name, email, mobile, address, bicycles, securityMoney } = location.state || {};
   const [currentTime, setCurrentTime] = useState(null);  // Store current time
   const [isTimeConfirmed, setIsTimeConfirmed] = useState(false); // Flag for confirming the time
+  const [paymentDetails, setPaymentDetails] = useState(null); // State to store payment details to display
 
   // Filter out bicycles with quantity 0
   const filteredBicycles = bicycles.filter(bicycle => bicycle.quantity > 0);
 
   // Handle button click
   const handleTimeStart = () => {
-    const timeNow = new Date().toLocaleString(); // Get current time
+    const timeNow = new Date().toISOString(); // Get current time in ISO format
     setCurrentTime(timeNow);  // Display the current time
   };
 
   // Handle confirmation of time and save details to localStorage
   const handleConfirmTime = () => {
-    const totalPrice = calculateTotalPrice(); // Calculate total price for all bicycles
+    // Construct the cycles object with type names as keys and quantities as values
+    const cycles = filteredBicycles.reduce((acc, bicycle, index) => {
+      acc[`bicycle type ${index + 1}`] = bicycle.quantity;
+      return acc;
+    }, {});
 
-    const paymentDetails = {
-      name,
-      email,
-      mobile,
-      address,
-      bicycles: filteredBicycles,
-      securityMoney,
-      totalPrice,
-      time: currentTime,
+    const details = {
+      fullName: name,
+      email: email,
+      phoneNumber: mobile,  // Mobile number corresponds to phoneNumber
+      address: address,
+      cycles: cycles,
+      security: securityMoney,
+      timestamp: currentTime,  // Use current time as timestamp
     };
 
-    // Save the payment details to localStorage
-    const storedPayments = JSON.parse(localStorage.getItem('payments')) || [];
-    storedPayments.push(paymentDetails);
-    localStorage.setItem('payments', JSON.stringify(storedPayments));
+    // Set payment details to display
+    setPaymentDetails(details);
+
+    // Send data to backend
+    fetch('http://localhost:8000/api/start/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(details),
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Payment details saved:', data);
+        setIsTimeConfirmed(true);
+      })
+      .catch(error => {
+        console.error('Error sending payment details:', error);
+      });
 
     // Mark the time as confirmed
     setIsTimeConfirmed(true);
@@ -123,13 +142,6 @@ function Payment() {
                 >
                   Confirm Time
                 </button>
-              </div>
-            )}
-
-            {/* If time is confirmed */}
-            {isTimeConfirmed && (
-              <div className="mt-6 text-green-600">
-                <p>Customer details have been saved successfully!</p>
               </div>
             )}
 
