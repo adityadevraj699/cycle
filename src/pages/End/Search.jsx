@@ -1,29 +1,94 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function Search() {
   const [payments, setPayments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPayments, setFilteredPayments] = useState([]);
 
-  // Fetch data from localStorage when the component mounts
+  // Fetch data from backend API when the component mounts
   useEffect(() => {
-    const storedPayments = JSON.parse(localStorage.getItem('payments')) || [];
-    setPayments(storedPayments);
-    setFilteredPayments(storedPayments); // Set the initial filtered payments
+    // Fetch data from the backend
+    fetch('http://localhost:8000/api/search/all')
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch payments');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        // Accessing the 'users' array from the response and setting it as the payment data
+        setPayments(data.users); // Assuming the response contains a 'users' array
+        setFilteredPayments(data.users); // Set the initial filtered payments
+      })
+      .catch((error) => {
+        console.error('Error fetching payments:', error);
+      });
   }, []);
 
   // Handle the search functionality
   const handleSearch = () => {
-    const lowerCaseQuery = searchQuery.toLowerCase();
-    const filtered = payments.filter((payment) => {
-      // Search by mobile number or time (date)
-      const isMatchByMobile = payment.mobile.toLowerCase().includes(lowerCaseQuery);
-      const isMatchByDate = payment.time.toLowerCase().includes(lowerCaseQuery);
-      return isMatchByMobile || isMatchByDate;
-    });
-    setFilteredPayments(filtered);
+    // Fetch filtered users from backend
+    fetch(`http://localhost:8000/api/search/user?query=${searchQuery}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          setFilteredPayments(data.users); // Update the filtered payments state
+        } else {
+          alert('No users found');
+          setFilteredPayments([]); // Clear the list if no users are found
+        }
+      })
+      .catch((error) => {
+        console.error('Error searching payments:', error);
+        alert('Error connecting to the server.');
+      });
   };
+  
+  const navigate = useNavigate(); // Initialize the navigate function
 
+  const handleEndClick = (payment) => {
+    const currentTime = new Date().toISOString(); // Get the current time
+  
+    console.log('Payment to end:', payment); // Log to check the payment data
+  
+    // Send POST request to backend with the current time and payment details
+    fetch('http://localhost:8000/api/end/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phoneNumber: payment.phoneNumber,
+        security: payment.security,
+        endTime: currentTime,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log('Response from backend:', data);
+  
+        // Check success and display appropriate messages
+        if (data.success) {
+          alert(`End Successful! Total Price: ₹${data.totalPrice}, Remaining Balance: ₹${data.remainingBalance}`);
+          
+          // Redirect to the Payment component with state (optional)
+          navigate('/payment-details', { state: { paymentDetails: data } });
+        } else {
+          alert(`Error: ${data.message}. Remaining Balance: ₹${data.remainingBalance || 'N/A'}`);
+        }
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        alert('Error connecting to the server.');
+      });
+  };
+  
   return (
     <div
       className="min-h-screen flex flex-col items-center py-8 relative"
@@ -80,30 +145,39 @@ function Search() {
                 <th className="px-6 py-3 text-left">Bicycles</th>
                 <th className="px-6 py-3 text-left">Security Money</th>
                 <th className="px-6 py-3 text-left">Total Price</th>
+                <th className="px-6 py-3 text-left">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredPayments.length > 0 ? (
                 filteredPayments.map((payment, index) => (
                   <tr key={index} className="hover:bg-green-50 transition-all">
-                    <td className="px-6 py-4 text-sm text-gray-700">{payment.name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{payment.fullName}</td>
                     <td className="px-6 py-4 text-sm text-gray-700">{payment.email}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{payment.mobile}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{payment.time}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{payment.phoneNumber}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{new Date(payment.startTime).toLocaleString()}</td>
                     <td className="px-6 py-4 text-sm text-gray-700">
-                      {payment.bicycles.map((bicycle, idx) => (
+                      {Object.entries(payment.cycles).map(([type, quantity], idx) => (
                         <div key={idx} className="text-sm">
-                          {bicycle.type} - {bicycle.quantity} rented = {bicycle.rate}
+                          {type} - {quantity} rented
                         </div>
                       ))}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{payment.securityMoney}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{payment.totalPrice}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{payment.security}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{payment.security + Object.values(payment.cycles).reduce((a, b) => a + b, 0) * 100}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      <button
+                        onClick={() => handleEndClick(payment)}
+                        className="py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                      >
+                        End
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="text-center py-4 text-gray-500">
+                  <td colSpan="8" className="text-center py-4 text-gray-500">
                     No payments found.
                   </td>
                 </tr>
