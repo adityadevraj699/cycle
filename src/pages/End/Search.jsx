@@ -6,9 +6,7 @@ function Search() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPayments, setFilteredPayments] = useState([]);
 
-  // Fetch data from backend API when the component mounts
   useEffect(() => {
-    // Fetch data from the backend
     fetch('http://localhost:8000/api/search/all')
       .then((response) => {
         if (!response.ok) {
@@ -17,18 +15,15 @@ function Search() {
         return response.json();
       })
       .then((data) => {
-        // Accessing the 'users' array from the response and setting it as the payment data
-        setPayments(data.users); // Assuming the response contains a 'users' array
-        setFilteredPayments(data.users); // Set the initial filtered payments
+        setPayments(data.users || []);
+        setFilteredPayments(data.users || []);
       })
       .catch((error) => {
         console.error('Error fetching payments:', error);
       });
   }, []);
 
-  // Handle the search functionality
   const handleSearch = () => {
-    // Fetch filtered users from backend
     fetch(`http://localhost:8000/api/search/user?query=${searchQuery}`, {
       method: 'GET',
       headers: {
@@ -38,10 +33,10 @@ function Search() {
       .then((response) => response.json())
       .then((data) => {
         if (data.success) {
-          setFilteredPayments(data.users); // Update the filtered payments state
+          setFilteredPayments(data.users || []);
         } else {
           alert('No users found');
-          setFilteredPayments([]); // Clear the list if no users are found
+          setFilteredPayments([]);
         }
       })
       .catch((error) => {
@@ -49,15 +44,12 @@ function Search() {
         alert('Error connecting to the server.');
       });
   };
-  
-  const navigate = useNavigate(); // Initialize the navigate function
+
+  const navigate = useNavigate();
 
   const handleEndClick = (payment) => {
-    const currentTime = new Date().toISOString(); // Get the current time
-  
-    console.log('Payment to end:', payment); // Log to check the payment data
-  
-    // Send POST request to backend with the current time and payment details
+    const currentTime = new Date().toISOString();
+
     fetch('http://localhost:8000/api/end/submit', {
       method: 'POST',
       headers: {
@@ -65,19 +57,13 @@ function Search() {
       },
       body: JSON.stringify({
         phoneNumber: payment.phoneNumber,
-        security: payment.security,
         endTime: currentTime,
       }),
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log('Response from backend:', data);
-  
-        // Check success and display appropriate messages
         if (data.success) {
-          alert(`End Successful! Total Price: ₹${data.totalPrice}, Remaining Balance: ₹${data.remainingBalance}`);
-          
-          // Redirect to the Payment component with state (optional)
+          // alert(`End Successful! Total Price: ₹${data.totalPrice}, Remaining Balance: ₹${data.remainingBalance}`);
           navigate('/payment-details', { state: { paymentDetails: data } });
         } else {
           alert(`Error: ${data.message}. Remaining Balance: ₹${data.remainingBalance || 'N/A'}`);
@@ -88,18 +74,17 @@ function Search() {
         alert('Error connecting to the server.');
       });
   };
-  
+
   return (
     <div
       className="min-h-screen flex flex-col items-center py-8 relative"
       style={{
-        backgroundImage: 'url("https://wallpapercave.com/wp/wp3001112.jpg")', // Add your background image URL here
+        backgroundImage: 'url("https://wallpapercave.com/wp/wp3001112.jpg")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
       }}
     >
-      {/* Overlay with opacity */}
       <div
         className="absolute inset-0 bg-black opacity-50 z-0"
         style={{
@@ -110,11 +95,8 @@ function Search() {
         }}
       ></div>
 
-      {/* Fixed Search Bar */}
       <div className="w-full max-w-5xl p-8 bg-white rounded-lg shadow-xl z-10 relative">
         <h2 className="text-3xl font-semibold text-gray-800 mb-6">Payment Details</h2>
-
-        {/* Search Input */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <input
             type="text"
@@ -123,16 +105,23 @@ function Search() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <button
-            onClick={handleSearch}
-            className="w-full sm:w-32 mt-4 sm:mt-0 py-3 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600 transition-all"
-          >
-            Search
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSearch}
+              className="py-3 px-4 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600 transition-all"
+            >
+              Search
+            </button>
+            <button
+              onClick={() => setFilteredPayments(payments)}
+              className="py-3 px-4 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-all"
+            >
+              Show All
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Scrollable List of Payments */}
       <div className="w-full max-w-5xl p-8 bg-white rounded-lg shadow-xl overflow-y-auto max-h-[60vh] mt-2 z-10 relative">
         <div className="overflow-x-auto">
           <table className="min-w-full table-auto border-collapse bg-white rounded-lg shadow-sm">
@@ -144,7 +133,6 @@ function Search() {
                 <th className="px-6 py-3 text-left">Time</th>
                 <th className="px-6 py-3 text-left">Bicycles</th>
                 <th className="px-6 py-3 text-left">Security Money</th>
-                <th className="px-6 py-3 text-left">Total Price</th>
                 <th className="px-6 py-3 text-left">Action</th>
               </tr>
             </thead>
@@ -155,16 +143,26 @@ function Search() {
                     <td className="px-6 py-4 text-sm text-gray-700">{payment.fullName}</td>
                     <td className="px-6 py-4 text-sm text-gray-700">{payment.email}</td>
                     <td className="px-6 py-4 text-sm text-gray-700">{payment.phoneNumber}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{new Date(payment.startTime).toLocaleString()}</td>
                     <td className="px-6 py-4 text-sm text-gray-700">
-                      {Object.entries(payment.cycles).map(([type, quantity], idx) => (
-                        <div key={idx} className="text-sm">
-                          {type} - {quantity} rented
-                        </div>
-                      ))}
+                      {new Date(payment.startTime).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{payment.security}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{payment.security + Object.values(payment.cycles).reduce((a, b) => a + b, 0) * 100}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {payment.cycles && typeof payment.cycles === 'object'
+                        ? Object.entries(payment.cycles).map(([type, quantity], idx) => (
+                            <div key={idx} className="text-sm">
+                              {type} - {quantity} rented
+                            </div>
+                          ))
+                        : 'No bicycles rented'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{payment.security || 'N/A'}</td>
+                    {/* <td className="px-6 py-4 text-sm text-gray-700">
+                      {typeof payment.security === 'number' &&
+                      payment.cycles &&
+                      typeof payment.cycles === 'object'
+                        ? payment.security + Object.values(payment.cycles).reduce((a, b) => a + b, 0) * 100
+                        : 'N/A'}
+                    </td> */}
                     <td className="px-6 py-4 text-sm text-gray-700">
                       <button
                         onClick={() => handleEndClick(payment)}

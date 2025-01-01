@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 function Payment() {
   const location = useLocation();
+  const navigate = useNavigate(); // Hook for navigation
   const { name, email, mobile, address, bicycles, securityMoney } = location.state || {};
   const [currentTime, setCurrentTime] = useState(null);  // Store current time
   const [isTimeConfirmed, setIsTimeConfirmed] = useState(false); // Flag for confirming the time
@@ -50,6 +51,7 @@ function Payment() {
       .then(data => {
         console.log('Payment details saved:', data);
         setIsTimeConfirmed(true);
+        navigate('/'); // Navigate to the home page after confirming time
       })
       .catch(error => {
         console.error('Error sending payment details:', error);
